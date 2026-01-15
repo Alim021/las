@@ -3,52 +3,24 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "axios": "^1.6.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-paginate": "^8.1.4",
-    "react-scripts": "5.0.1"
+    "axios": "^1.13.2",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "react-paginate": "^8.3.0",
+    "react-scripts": "5.0.1",
+    "web-vitals": "^2.1.4"
   },
   "scripts": {
-<<<<<<< HEAD
-  "start": "react-scripts start",
-  "build": "CI=false react-scripts build",
-  "test": "react-scripts test",
-  "eject": "react-scripts eject",
-  "postinstall": "npm install web-vitals"
-},
-=======
     "start": "react-scripts start",
     "build": "CI=false react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
-  "proxy": "http://localhost:5000",
->>>>>>> 75ec3fc3ee76cd5c554b7cc842cc092660a06c5d
   "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ],
-    "rules": {
-<<<<<<< HEAD
-      "react-hooks/exhaustive-deps": "warn",
-      "no-unused-vars": "warn"
-=======
-      "react-hooks/exhaustive-deps": "warn"
->>>>>>> 75ec3fc3ee76cd5c554b7cc842cc092660a06c5d
-    }
+    "extends": ["react-app", "react-app/jest"]
   },
   "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+    "production": [">0.2%", "not dead", "not op_mini all"],
+    "development": ["last 1 chrome version", "last 1 firefox version", "last 1 safari version"]
   }
 }
