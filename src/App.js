@@ -36,7 +36,32 @@ function App() {
   const [testMethod, setTestMethod] = useState('');
   const [isDemoMode, setIsDemoMode] = useState(false);
 
+  // Generate mock data for demo - wrapped in useCallback
+  const generateMockData = useCallback(() => {
+    const mockLogs = [];
+    for (let i = 1; i <= 50; i++) {
+      mockLogs.push({
+        _id: `mock_${i}`,
+        user: `user${Math.floor(Math.random() * 5) + 1}`,
+        endpoint: ENDPOINTS[Math.floor(Math.random() * ENDPOINTS.length)],
+        method: HTTP_METHODS[Math.floor(Math.random() * HTTP_METHODS.length)],
+        timestamp: new Date(Date.now() - Math.random() * 86400000 * 7).toISOString(),
+        fullUrl: ENDPOINTS[Math.floor(Math.random() * ENDPOINTS.length)] + '?page=' + (Math.floor(i/10) + 1)
+      });
+    }
+    
+    const startIndex = page * limit;
+    const paginatedLogs = mockLogs.slice(startIndex, startIndex + limit);
+    
+    return {
+      data: paginatedLogs,
+      total: mockLogs.length,
+      totalPages: Math.ceil(mockLogs.length / limit)
+    };
+  }, [page, limit]);
+
   // Wrap fetchLogs with useCallback to avoid re-creating on every render
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const fetchLogs = useCallback(async (pageNumber = 0) => {
     try {
       setLoading(true);
@@ -82,31 +107,7 @@ function App() {
     } finally {
       setLoading(false);
     }
-  }, [limit, userFilter, testUser]);
-
-  // Generate mock data for demo
-  const generateMockData = () => {
-    const mockLogs = [];
-    for (let i = 1; i <= 50; i++) {
-      mockLogs.push({
-        _id: `mock_${i}`,
-        user: `user${Math.floor(Math.random() * 5) + 1}`,
-        endpoint: ENDPOINTS[Math.floor(Math.random() * ENDPOINTS.length)],
-        method: HTTP_METHODS[Math.floor(Math.random() * HTTP_METHODS.length)],
-        timestamp: new Date(Date.now() - Math.random() * 86400000 * 7).toISOString(),
-        fullUrl: ENDPOINTS[Math.floor(Math.random() * ENDPOINTS.length)] + '?page=' + (Math.floor(i/10) + 1)
-      });
-    }
-    
-    const startIndex = page * limit;
-    const paginatedLogs = mockLogs.slice(startIndex, startIndex + limit);
-    
-    return {
-      data: paginatedLogs,
-      total: mockLogs.length,
-      totalPages: Math.ceil(mockLogs.length / limit)
-    };
-  };
+  }, [limit, userFilter, testUser, generateMockData]);
 
   useEffect(() => {
     fetchLogs();
