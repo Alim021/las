@@ -3,33 +3,40 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@testing-library/dom": "^10.4.1",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.1",
-    "@testing-library/user-event": "^13.5.0",
-    "axios": "^1.13.2",
-    "react": "^19.2.3",
-    "react-datepicker": "^9.1.0",
-    "react-dom": "^19.2.3",
-    "react-paginate": "^8.3.0",
-    "react-scripts": "5.0.1",
-    "web-vitals": "^2.1.4"
+    "axios": "^1.6.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-paginate": "^8.1.4",
+    "react-scripts": "5.0.1"
   },
   "scripts": {
+<<<<<<< HEAD
   "start": "react-scripts start",
   "build": "CI=false react-scripts build",
   "test": "react-scripts test",
   "eject": "react-scripts eject",
   "postinstall": "npm install web-vitals"
 },
+=======
+    "start": "react-scripts start",
+    "build": "CI=false react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "proxy": "http://localhost:5000",
+>>>>>>> 75ec3fc3ee76cd5c554b7cc842cc092660a06c5d
   "eslintConfig": {
     "extends": [
       "react-app",
       "react-app/jest"
     ],
     "rules": {
+<<<<<<< HEAD
       "react-hooks/exhaustive-deps": "warn",
       "no-unused-vars": "warn"
+=======
+      "react-hooks/exhaustive-deps": "warn"
+>>>>>>> 75ec3fc3ee76cd5c554b7cc842cc092660a06c5d
     }
   },
   "browserslist": {
