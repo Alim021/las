@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import ReactPaginate from 'react-paginate';
 import './App.css';
@@ -32,43 +32,8 @@ function App() {
   const [testEndpoint, setTestEndpoint] = useState('');
   const [testMethod, setTestMethod] = useState('');
 
-  // Function to simulate API calls
-  const simulateApiCall = async () => {
-    try {
-      const config = {
-        headers: { 'x-user': testUser }
-      };
-
-      // Add query parameters for simulation
-      const queryParams = new URLSearchParams();
-      queryParams.append('user', testUser);
-      queryParams.append('simulated', 'true');
-      
-      // Add random query parameters to simulate real scenarios
-      const randomParams = ['page=1', 'limit=10', 'search=test', 'sort=desc', 'filter=active'];
-      const randomParam = randomParams[Math.floor(Math.random() * randomParams.length)];
-      queryParams.append('additional', randomParam.split('=')[0]);
-      
-      const queryString = queryParams.toString();
-
-      if (testMethod === 'GET') {
-        await axios.get(`http://localhost:5000${testEndpoint}?${queryString}`, config);
-      } else if (testMethod === 'POST') {
-        await axios.post(`http://localhost:5000${testEndpoint}?${queryString}`, {}, config);
-      } else if (testMethod === 'PUT') {
-        await axios.put(`http://localhost:5000${testEndpoint}?${queryString}`, {}, config);
-      } else if (testMethod === 'DELETE') {
-        await axios.delete(`http://localhost:5000${testEndpoint}?${queryString}`, config);
-      }
-
-      // Refresh logs after simulation
-      fetchLogs(0); // Go back to page 1 after new log
-    } catch (error) {
-      console.error('API call failed:', error);
-    }
-  };
-
-  const fetchLogs = async (pageNumber = 0) => {
+  // Wrap fetchLogs with useCallback to avoid re-creating on every render
+  const fetchLogs = useCallback(async (pageNumber = 0) => {
     try {
       setLoading(true);
 
@@ -77,10 +42,9 @@ function App() {
         limit: limit,
       };
 
-      // Only include user filter if provided
       if (userFilter) params.user = userFilter;
 
-      const res = await axios.get('http://localhost:5000/api/logs', { 
+      const res = await axios.get('http://localhost:5000/api/logs', {
         params,
         headers: { 'x-user': testUser }
       });
@@ -94,11 +58,43 @@ function App() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [limit, userFilter, testUser]);
 
   useEffect(() => {
     fetchLogs();
-  }, []);
+  }, [fetchLogs]);
+
+  const simulateApiCall = async () => {
+    try {
+      const config = {
+        headers: { 'x-user': testUser }
+      };
+
+      const queryParams = new URLSearchParams();
+      queryParams.append('user', testUser);
+      queryParams.append('simulated', 'true');
+
+      const randomParams = ['page=1', 'limit=10', 'search=test', 'sort=desc', 'filter=active'];
+      const randomParam = randomParams[Math.floor(Math.random() * randomParams.length)];
+      queryParams.append('additional', randomParam.split('=')[0]);
+
+      const queryString = queryParams.toString();
+
+      if (testMethod === 'GET') {
+        await axios.get(`http://localhost:5000${testEndpoint}?${queryString}`, config);
+      } else if (testMethod === 'POST') {
+        await axios.post(`http://localhost:5000${testEndpoint}?${queryString}`, {}, config);
+      } else if (testMethod === 'PUT') {
+        await axios.put(`http://localhost:5000${testEndpoint}?${queryString}`, {}, config);
+      } else if (testMethod === 'DELETE') {
+        await axios.delete(`http://localhost:5000${testEndpoint}?${queryString}`, config);
+      }
+
+      fetchLogs(0); // Refresh logs and go to first page
+    } catch (error) {
+      console.error('API call failed:', error);
+    }
+  };
 
   const handlePageClick = (data) => {
     fetchLogs(data.selected);
@@ -110,25 +106,18 @@ function App() {
   };
 
   const handleRefresh = () => {
-  window.location.reload();
-};
-
-  const clearFilters = () => {
-    setUserFilter('');
-    fetchLogs(0);
+    window.location.reload();
   };
 
   const exportCSV = async () => {
     try {
       const params = {};
-
-      // Only include user filter if provided
       if (userFilter) params.user = userFilter;
 
       const queryString = new URLSearchParams(params).toString();
       const url = `http://localhost:5000/api/logs/export?${queryString}`;
 
-      const response = await axios.get(url, { 
+      const response = await axios.get(url, {
         responseType: 'blob',
         headers: { 'x-user': testUser }
       });
@@ -161,7 +150,7 @@ function App() {
               className="input"
             />
           </div>
-          
+
           <div className="input-group">
             <label>Endpoint: </label>
             <select
@@ -194,21 +183,20 @@ function App() {
             </select>
           </div>
 
-          <button 
-  className="btn simulate-btn"
-  onClick={simulateApiCall}
-  disabled={!testEndpoint || !testMethod}
->
-  🚀 Call API
-</button>
+          <button
+            className="btn simulate-btn"
+            onClick={simulateApiCall}
+            disabled={!testEndpoint || !testMethod}
+          >
+            🚀 Call API
+          </button>
 
-<button
-  className="btn simulate-btn"
-  onClick={handleRefresh}
->
-  🔄 Refresh
-</button>
-
+          <button
+            className="btn simulate-btn"
+            onClick={handleRefresh}
+          >
+            🔄 Refresh
+          </button>
         </div>
       </div>
 
@@ -231,9 +219,9 @@ function App() {
             <div className="button-group">
               <button type="submit" className="btn filter-btn">
                 🔍 Filter
-              </button>  
-                
-                <button type="button" className="btn export-btn" onClick={exportCSV}>
+              </button>
+
+              <button type="button" className="btn export-btn" onClick={exportCSV}>
                 📊 Export CSV
               </button>
             </div>
@@ -255,7 +243,7 @@ function App() {
               <span>Showing {logs.length} of {totalLogs} records | Page {page + 1} of {totalPages}</span>
             </div>
           </div>
-          
+
           <div className="table-container">
             <table>
               <thead>
@@ -312,7 +300,7 @@ function App() {
             </table>
           </div>
 
-          {/* Pagination - Like your screenshot */}
+          {/* Pagination */}
           {totalPages > 1 && (
             <div className="pagination-container">
               <div className="pagination-wrapper">
