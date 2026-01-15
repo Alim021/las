@@ -20,6 +20,9 @@ const ENDPOINTS = [
   '/api/notifications'
 ];
 
+// Use environment variable for API URL or default to localhost for development
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 function App() {
   const [logs, setLogs] = useState([]);
   const [userFilter, setUserFilter] = useState('');
@@ -44,7 +47,7 @@ function App() {
 
       if (userFilter) params.user = userFilter;
 
-      const res = await axios.get('http://localhost:5000/api/logs', {
+      const res = await axios.get(`${API_BASE_URL}/api/logs`, {
         params,
         headers: { 'x-user': testUser }
       });
@@ -55,6 +58,22 @@ function App() {
       setPage(pageNumber);
     } catch (error) {
       console.error('Error fetching logs:', error);
+      // For demo purposes, show sample data if backend is not available
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Using mock data for development');
+        const mockData = {
+          data: [
+            { _id: '1', user: 'demo_user', endpoint: '/api/users', method: 'GET', timestamp: new Date().toISOString(), fullUrl: '/api/users?page=1' },
+            { _id: '2', user: 'admin', endpoint: '/api/login', method: 'POST', timestamp: new Date(Date.now() - 3600000).toISOString(), fullUrl: '/api/login' },
+            { _id: '3', user: 'test_user', endpoint: '/api/products', method: 'GET', timestamp: new Date(Date.now() - 7200000).toISOString(), fullUrl: '/api/products?category=electronics' },
+          ],
+          total: 3,
+          totalPages: 1
+        };
+        setLogs(mockData.data);
+        setTotalLogs(mockData.total);
+        setTotalPages(mockData.totalPages);
+      }
     } finally {
       setLoading(false);
     }
@@ -81,18 +100,23 @@ function App() {
       const queryString = queryParams.toString();
 
       if (testMethod === 'GET') {
-        await axios.get(`http://localhost:5000${testEndpoint}?${queryString}`, config);
+        await axios.get(`${API_BASE_URL}${testEndpoint}?${queryString}`, config);
       } else if (testMethod === 'POST') {
-        await axios.post(`http://localhost:5000${testEndpoint}?${queryString}`, {}, config);
+        await axios.post(`${API_BASE_URL}${testEndpoint}?${queryString}`, {}, config);
       } else if (testMethod === 'PUT') {
-        await axios.put(`http://localhost:5000${testEndpoint}?${queryString}`, {}, config);
+        await axios.put(`${API_BASE_URL}${testEndpoint}?${queryString}`, {}, config);
       } else if (testMethod === 'DELETE') {
-        await axios.delete(`http://localhost:5000${testEndpoint}?${queryString}`, config);
+        await axios.delete(`${API_BASE_URL}${testEndpoint}?${queryString}`, config);
       }
 
       fetchLogs(0); // Refresh logs and go to first page
     } catch (error) {
       console.error('API call failed:', error);
+      // For demo, simulate success even if backend is down
+      if (process.env.NODE_ENV === 'development') {
+        alert(`Simulated API call to ${testEndpoint} with ${testMethod} method`);
+        fetchLogs(0);
+      }
     }
   };
 
@@ -106,7 +130,7 @@ function App() {
   };
 
   const handleRefresh = () => {
-    window.location.reload();
+    fetchLogs(page);
   };
 
   // Added: clearFilters function to fix the unused variable warning
@@ -124,7 +148,7 @@ function App() {
       if (userFilter) params.user = userFilter;
 
       const queryString = new URLSearchParams(params).toString();
-      const url = `http://localhost:5000/api/logs/export?${queryString}`;
+      const url = `${API_BASE_URL}/api/logs/export?${queryString}`;
 
       const response = await axios.get(url, {
         responseType: 'blob',
@@ -138,12 +162,32 @@ function App() {
       link.click();
     } catch (error) {
       console.error('CSV export failed:', error);
+      // For demo, create a dummy CSV
+      if (process.env.NODE_ENV === 'development') {
+        const csvContent = "data:text/csv;charset=utf-8,User,Endpoint,Method,Timestamp\n" +
+          "demo_user,/api/users,GET," + new Date().toISOString() + "\n" +
+          "admin,/api/login,POST," + new Date().toISOString() + "\n";
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement('a');
+        link.setAttribute('href', encodedUri);
+        link.setAttribute('download', 'audit_logs_demo.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
     }
   };
 
   return (
     <div className="container">
       <h1>Audit Logging Dashboard</h1>
+      
+      {/* Development notice */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="dev-notice">
+          🔧 Development Mode: Using mock data for demonstration
+        </div>
+      )}
 
       {/* Simulation Controls */}
       <div className="simulation-controls">
@@ -277,7 +321,7 @@ function App() {
                 {logs.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="no-data">
-                      📭 No audit logs found. Try simulating some API calls first.
+                      📭 No audit logs found. {process.env.NODE_ENV === 'development' ? 'Try simulating API calls above.' : 'The backend might be offline.'}
                     </td>
                   </tr>
                 ) : (
@@ -347,6 +391,11 @@ function App() {
           )}
         </>
       )}
+      
+      {/* Footer with API info */}
+      <div className="footer">
+        <small>API Base URL: {API_BASE_URL}</small>
+      </div>
     </div>
   );
 }
