@@ -109,6 +109,15 @@ function App() {
     window.location.reload();
   };
 
+  // Added: clearFilters function to fix the unused variable warning
+  const clearFilters = () => {
+    setUserFilter('');
+    setTestUser('');
+    setTestEndpoint('');
+    setTestMethod('');
+    fetchLogs(0);
+  };
+
   const exportCSV = async () => {
     try {
       const params = {};
@@ -219,6 +228,16 @@ function App() {
             <div className="button-group">
               <button type="submit" className="btn filter-btn">
                 🔍 Filter
+              </button>
+
+              {/* Added: Clear Filters button that uses the clearFilters function */}
+              <button 
+                type="button" 
+                className="btn clear-btn"
+                onClick={clearFilters}
+                disabled={!userFilter && !testUser && !testEndpoint && !testMethod}
+              >
+                🗑️ Clear Filters
               </button>
 
               <button type="button" className="btn export-btn" onClick={exportCSV}>
