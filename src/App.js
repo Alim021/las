@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import ReactPaginate from 'react-paginate';
 import './App.css';
@@ -20,9 +20,6 @@ const ENDPOINTS = [
   '/api/notifications'
 ];
 
-// For Vercel deployment, use relative path if no backend
-const API_BASE_URL = process.env.REACT_APP_API_URL || '';
-
 function App() {
   const [logs, setLogs] = useState([]);
   const [userFilter, setUserFilter] = useState('');
@@ -34,35 +31,44 @@ function App() {
   const [testUser, setTestUser] = useState('');
   const [testEndpoint, setTestEndpoint] = useState('');
   const [testMethod, setTestMethod] = useState('');
-  const [isDemoMode, setIsDemoMode] = useState(false);
 
-  // Generate mock data for demo - wrapped in useCallback
-  const generateMockData = useCallback(() => {
-    const mockLogs = [];
-    for (let i = 1; i <= 50; i++) {
-      mockLogs.push({
-        _id: `mock_${i}`,
-        user: `user${Math.floor(Math.random() * 5) + 1}`,
-        endpoint: ENDPOINTS[Math.floor(Math.random() * ENDPOINTS.length)],
-        method: HTTP_METHODS[Math.floor(Math.random() * HTTP_METHODS.length)],
-        timestamp: new Date(Date.now() - Math.random() * 86400000 * 7).toISOString(),
-        fullUrl: ENDPOINTS[Math.floor(Math.random() * ENDPOINTS.length)] + '?page=' + (Math.floor(i/10) + 1)
-      });
+  // Function to simulate API calls
+  const simulateApiCall = async () => {
+    try {
+      const config = {
+        headers: { 'x-user': testUser }
+      };
+
+      // Add query parameters for simulation
+      const queryParams = new URLSearchParams();
+      queryParams.append('user', testUser);
+      queryParams.append('simulated', 'true');
+      
+      // Add random query parameters to simulate real scenarios
+      const randomParams = ['page=1', 'limit=10', 'search=test', 'sort=desc', 'filter=active'];
+      const randomParam = randomParams[Math.floor(Math.random() * randomParams.length)];
+      queryParams.append('additional', randomParam.split('=')[0]);
+      
+      const queryString = queryParams.toString();
+
+      if (testMethod === 'GET') {
+        await axios.get(`http://localhost:5000${testEndpoint}?${queryString}`, config);
+      } else if (testMethod === 'POST') {
+        await axios.post(`http://localhost:5000${testEndpoint}?${queryString}`, {}, config);
+      } else if (testMethod === 'PUT') {
+        await axios.put(`http://localhost:5000${testEndpoint}?${queryString}`, {}, config);
+      } else if (testMethod === 'DELETE') {
+        await axios.delete(`http://localhost:5000${testEndpoint}?${queryString}`, config);
+      }
+
+      // Refresh logs after simulation
+      fetchLogs(0); // Go back to page 1 after new log
+    } catch (error) {
+      console.error('API call failed:', error);
     }
-    
-    const startIndex = page * limit;
-    const paginatedLogs = mockLogs.slice(startIndex, startIndex + limit);
-    
-    return {
-      data: paginatedLogs,
-      total: mockLogs.length,
-      totalPages: Math.ceil(mockLogs.length / limit)
-    };
-  }, [page, limit]);
+  };
 
-  // Wrap fetchLogs with useCallback to avoid re-creating on every render
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const fetchLogs = useCallback(async (pageNumber = 0) => {
+  const fetchLogs = async (pageNumber = 0) => {
     try {
       setLoading(true);
 
@@ -71,116 +77,28 @@ function App() {
         limit: limit,
       };
 
+      // Only include user filter if provided
       if (userFilter) params.user = userFilter;
 
-      const apiUrl = API_BASE_URL ? `${API_BASE_URL}/api/logs` : '';
-      
-      if (!apiUrl) {
-        // Demo mode - generate fake data
-        setIsDemoMode(true);
-        const mockData = generateMockData();
-        setLogs(mockData.data);
-        setTotalLogs(mockData.total);
-        setTotalPages(mockData.totalPages);
-        setPage(pageNumber);
-        return;
-      }
-
-      const res = await axios.get(apiUrl, {
+      const res = await axios.get('http://localhost:5000/api/logs', { 
         params,
         headers: { 'x-user': testUser }
       });
 
-      setIsDemoMode(false);
       setLogs(res.data.data);
       setTotalLogs(res.data.total);
       setTotalPages(res.data.totalPages);
       setPage(pageNumber);
     } catch (error) {
       console.error('Error fetching logs:', error);
-      // Use mock data as fallback
-      setIsDemoMode(true);
-      const mockData = generateMockData();
-      setLogs(mockData.data);
-      setTotalLogs(mockData.total);
-      setTotalPages(mockData.totalPages);
     } finally {
       setLoading(false);
     }
-  }, [limit, userFilter, testUser, generateMockData]);
+  };
 
   useEffect(() => {
     fetchLogs();
-  }, [fetchLogs]);
-
-  const simulateApiCall = async () => {
-    if (!testEndpoint || !testMethod) {
-      alert('Please select endpoint and method');
-      return;
-    }
-
-    if (!API_BASE_URL) {
-      // Demo mode - add a mock log entry
-      const newLog = {
-        _id: `sim_${Date.now()}`,
-        user: testUser || 'demo_user',
-        endpoint: testEndpoint,
-        method: testMethod,
-        timestamp: new Date().toISOString(),
-        fullUrl: `${testEndpoint}?user=${testUser}&simulated=true`
-      };
-      
-      setLogs(prev => [newLog, ...prev.slice(0, limit - 1)]);
-      setTotalLogs(prev => prev + 1);
-      alert(`✅ Simulated: ${testMethod} ${testEndpoint}`);
-      return;
-    }
-
-    try {
-      const config = {
-        headers: { 'x-user': testUser }
-      };
-
-      const queryParams = new URLSearchParams();
-      queryParams.append('user', testUser);
-      queryParams.append('simulated', 'true');
-
-      const randomParams = ['page=1', 'limit=10', 'search=test', 'sort=desc', 'filter=active'];
-      const randomParam = randomParams[Math.floor(Math.random() * randomParams.length)];
-      queryParams.append('additional', randomParam.split('=')[0]);
-
-      const queryString = queryParams.toString();
-
-      if (testMethod === 'GET') {
-        await axios.get(`${API_BASE_URL}${testEndpoint}?${queryString}`, config);
-      } else if (testMethod === 'POST') {
-        await axios.post(`${API_BASE_URL}${testEndpoint}?${queryString}`, {}, config);
-      } else if (testMethod === 'PUT') {
-        await axios.put(`${API_BASE_URL}${testEndpoint}?${queryString}`, {}, config);
-      } else if (testMethod === 'DELETE') {
-        await axios.delete(`${API_BASE_URL}${testEndpoint}?${queryString}`, config);
-      }
-
-      alert(`✅ API Call Successful: ${testMethod} ${testEndpoint}`);
-      fetchLogs(0);
-    } catch (error) {
-      console.error('API call failed:', error);
-      alert('❌ API call failed. Running in demo mode.');
-      
-      // Add demo log entry
-      const newLog = {
-        _id: `demo_${Date.now()}`,
-        user: testUser || 'demo_user',
-        endpoint: testEndpoint,
-        method: testMethod,
-        timestamp: new Date().toISOString(),
-        fullUrl: `${testEndpoint}?user=${testUser}&simulated=true`
-      };
-      
-      setLogs(prev => [newLog, ...prev.slice(0, limit - 1)]);
-      setTotalLogs(prev => prev + 1);
-    }
-  };
+  }, []);
 
   const handlePageClick = (data) => {
     fetchLogs(data.selected);
@@ -192,50 +110,42 @@ function App() {
   };
 
   const handleRefresh = () => {
-    fetchLogs(page);
-  };
+  window.location.reload();
+};
 
   const clearFilters = () => {
     setUserFilter('');
-    setTestUser('');
-    setTestEndpoint('');
-    setTestMethod('');
     fetchLogs(0);
   };
 
-  const exportCSV = () => {
-    // Create CSV content
-    const headers = ['User', 'Endpoint', 'Method', 'Timestamp', 'URL'];
-    const csvContent = [
-      headers.join(','),
-      ...logs.map(log => [
-        `"${log.user}"`,
-        `"${log.endpoint}"`,
-        `"${log.method}"`,
-        `"${new Date(log.timestamp).toLocaleString()}"`,
-        `"${log.fullUrl || log.endpoint}"`
-      ].join(','))
-    ].join('\n');
-    
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `audit_logs_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    
-    alert(`📊 Exported ${logs.length} logs to CSV`);
+  const exportCSV = async () => {
+    try {
+      const params = {};
+
+      // Only include user filter if provided
+      if (userFilter) params.user = userFilter;
+
+      const queryString = new URLSearchParams(params).toString();
+      const url = `http://localhost:5000/api/logs/export?${queryString}`;
+
+      const response = await axios.get(url, { 
+        responseType: 'blob',
+        headers: { 'x-user': testUser }
+      });
+
+      const blob = new Blob([response.data], { type: 'text/csv' });
+      const link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = 'audit_logs.csv';
+      link.click();
+    } catch (error) {
+      console.error('CSV export failed:', error);
+    }
   };
 
   return (
     <div className="container">
       <h1>Audit Logging Dashboard</h1>
-      
-      {/* Demo mode notice */}
-      {isDemoMode && (
-        <div className="demo-notice">
-          🚀 <strong>Demo Mode</strong> - Showing sample data
-        </div>
-      )}
 
       {/* Simulation Controls */}
       <div className="simulation-controls">
@@ -251,7 +161,7 @@ function App() {
               className="input"
             />
           </div>
-
+          
           <div className="input-group">
             <label>Endpoint: </label>
             <select
@@ -284,24 +194,25 @@ function App() {
             </select>
           </div>
 
-          <button
-            className="btn simulate-btn"
-            onClick={simulateApiCall}
-            disabled={!testEndpoint || !testMethod}
-          >
-            🚀 Call API
-          </button>
+          <button 
+  className="btn simulate-btn"
+  onClick={simulateApiCall}
+  disabled={!testEndpoint || !testMethod}
+>
+  🚀 Call API
+</button>
 
-          <button
-            className="btn refresh-btn"
-            onClick={handleRefresh}
-          >
-            🔄 Refresh
-          </button>
+<button
+  className="btn simulate-btn"
+  onClick={handleRefresh}
+>
+  🔄 Refresh
+</button>
+
         </div>
       </div>
 
-      {/* Filter Section */}
+      {/* Simple Filter Form - Only User Filter */}
       <div className="filter-section">
         <h3>🔍 Filter Logs</h3>
         <form onSubmit={handleFilterSubmit} className="filter-form">
@@ -320,18 +231,9 @@ function App() {
             <div className="button-group">
               <button type="submit" className="btn filter-btn">
                 🔍 Filter
-              </button>
-
-              <button 
-                type="button" 
-                className="btn clear-btn"
-                onClick={clearFilters}
-                disabled={!userFilter && !testUser && !testEndpoint && !testMethod}
-              >
-                🗑️ Clear Filters
-              </button>
-
-              <button type="button" className="btn export-btn" onClick={exportCSV}>
+              </button>  
+                
+                <button type="button" className="btn export-btn" onClick={exportCSV}>
                 📊 Export CSV
               </button>
             </div>
@@ -339,7 +241,7 @@ function App() {
         </form>
       </div>
 
-      {/* Logs Table */}
+      {/* Logs Table - 4 Columns */}
       {loading ? (
         <div className="loading-container">
           <div className="spinner"></div>
@@ -353,7 +255,7 @@ function App() {
               <span>Showing {logs.length} of {totalLogs} records | Page {page + 1} of {totalPages}</span>
             </div>
           </div>
-
+          
           <div className="table-container">
             <table>
               <thead>
@@ -368,7 +270,7 @@ function App() {
                 {logs.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="no-data">
-                      📭 No audit logs found. Try simulating API calls above.
+                      📭 No audit logs found. Try simulating some API calls first.
                     </td>
                   </tr>
                 ) : (
@@ -410,7 +312,7 @@ function App() {
             </table>
           </div>
 
-          {/* Pagination */}
+          {/* Pagination - Like your screenshot */}
           {totalPages > 1 && (
             <div className="pagination-container">
               <div className="pagination-wrapper">
@@ -438,15 +340,6 @@ function App() {
           )}
         </>
       )}
-      
-      {/* Footer */}
-      <div className="footer">
-        <small>
-          {API_BASE_URL 
-            ? `Backend: ${API_BASE_URL}` 
-            : 'Demo Mode - Mock Data'}
-        </small>
-      </div>
     </div>
   );
 }
