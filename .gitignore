@@ -9,6 +9,7 @@
 /coverage
 
 # production
+# /build  <-- REMOVE OR COMMENT OUT THIS LINE
 
 # misc
 .DS_Store
