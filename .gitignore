@@ -9,7 +9,7 @@
 /coverage
 
 # production
-/build
+# /build   <-- COMMENTED OUT OR REMOVED
 
 # misc
 .DS_Store
